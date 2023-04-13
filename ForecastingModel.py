@@ -16,6 +16,10 @@ class ForecastingModel(ABC):
         self.modelName = modelName
         self.modelDescription = modelDescription
 
+        self.df: pd.DataFrame = None
+        self.train_df: pd.DataFrame = None
+        self.test_df: pd.DataFrame = None
+
     @abstractmethod
     def fit(self, municipalityId):
         pass

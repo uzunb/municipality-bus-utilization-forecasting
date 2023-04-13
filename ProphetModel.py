@@ -21,10 +21,6 @@ class ProphetModel(ForecastingModel):
                          modelName="Prophet",
                          modelDescription="Prophet is a procedure for forecasting time series data based on an additive model where non-linear trends are fit with yearly, weekly, and daily seasonality, plus holiday effects. It works best with time series that have strong seasonal effects and several seasons of historical data.")
 
-        self.df: pd.DataFrame = None
-        self.train_df: pd.DataFrame = None
-        self.test_df: pd.DataFrame = None
-
     def __loadData(self, municipalityId):
         self.df = pd.read_csv(DATA_DIR / 'municipality_bus_utilization.csv')
         self.df['timestamp'] = pd.to_datetime(

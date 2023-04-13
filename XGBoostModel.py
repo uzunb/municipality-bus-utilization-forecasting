@@ -16,6 +16,17 @@ class XGBoostModel(ForecastingModel):
                          modelName="XGBoost", 
                          modelDescription="XGBoost is an optimized distributed gradient boosting library designed to be highly efficient, flexible and portable. It implements machine learning algorithms under the Gradient Boosting framework. XGBoost provides a parallel tree boosting (also known as GBDT, GBM) that solve many data science problems in a fast and accurate way. The same code runs on major distributed environment (Hadoop, SGE, MPI) and can solve problems beyond billions of examples.")
 
+    def __loadData(self, municipalityId):
+        # Read the data
+        df = pd.read_csv(DATA_DIR / 'municipality_bus_utilization.csv')
+        df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y-%m-%d %H:%M:%S')
+        df = df.set_index('timestamp')
+
+        df = df[df['municipality_id'] == municipalityId]
+        df.drop(columns=['municipality_id'], inplace=True)
+
+    def __preprocess(self):
+
     def fit(self, municipalityId):
         pass
 
