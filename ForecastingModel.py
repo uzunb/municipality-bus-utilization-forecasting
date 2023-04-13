@@ -33,7 +33,7 @@ class ForecastingModel(ABC):
         pass
 
     def intro(self):
-        st.markdown("## {}".format(self.modelName))
+        st.markdown("### {}".format(self.modelName))
         st.markdown(self.modelDescription)
 
     def getModel(self):
