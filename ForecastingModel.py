@@ -49,7 +49,7 @@ class ForecastingModel(ABC):
     def getModelDescription(self):
         return self.modelDescription
     
-    def mean_absolute_percentage_error(y_true, y_pred):
+    def mean_absolute_percentage_error(self, y_true, y_pred):
         """  Mean Absolute Percentage Error - MAPE """
         y_true, y_pred = np.array(y_true), np.array(y_pred)
         return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
