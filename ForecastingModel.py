@@ -29,7 +29,7 @@ class ForecastingModel(ABC):
         pass
 
     @abstractmethod
-    def forecast(self, municipalityId):
+    def evaluate(self, municipalityId):
         pass
 
     def intro(self):
