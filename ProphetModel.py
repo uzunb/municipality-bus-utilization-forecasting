@@ -27,7 +27,8 @@ class ProphetModel(ForecastingModel):
 
     def __loadData(self, municipalityId):
         self.df = pd.read_csv(DATA_DIR / 'municipality_bus_utilization.csv')
-        self.df['timestamp'] = pd.to_datetime(self.df['timestamp'], format='%Y-%m-%d %H:%M:%S')
+        self.df['timestamp'] = pd.to_datetime(
+            self.df['timestamp'], format='%Y-%m-%d %H:%M:%S')
         self.df = self.df.set_index('timestamp')
 
         self.df = self.df[self.df['municipality_id'] == municipalityId]
@@ -46,21 +47,25 @@ class ProphetModel(ForecastingModel):
         self.df['quarter'] = self.df.index.quarter
         self.df['dayOfYear'] = self.df.index.dayofyear
 
-        self.df['usage'] = self.df.apply(lambda x: x['total_capacity'] if x['usage'] > x['total_capacity'] else x['usage'], axis=1)
-        self.df['usage_percentage'] = self.df['usage'] / self.df['total_capacity']*100
+        self.df['usage'] = self.df.apply(
+            lambda x: x['total_capacity'] if x['usage'] > x['total_capacity'] else x['usage'], axis=1)
+        self.df['usage_percentage'] = self.df['usage'] / \
+            self.df['total_capacity']*100
         self.df.sort_values(by='usage_percentage', ascending=False).head()
 
-        check_df = self.df[['date', 'hour']].groupby(['date', 'hour']).size().reset_index(name='counts')
+        check_df = self.df[['date', 'hour']].groupby(
+            ['date', 'hour']).size().reset_index(name='counts')
         check_df.sort_values('counts', ascending=True)
 
-        new_timestamps = pd.DataFrame(columns=['timestamp', 'usage', 'total_capacity', 'date', 'time', 'year', 'month', 'dayOfWeek', 'day', 'hour'])
+        new_timestamps = pd.DataFrame(columns=[
+                                      'timestamp', 'usage', 'total_capacity', 'date', 'time', 'year', 'month', 'dayOfWeek', 'day', 'hour'])
         for date in self.df['date'].unique():
             for hour in self.df['hour'].unique():
                 if check_df[(check_df['date'] == date) & (check_df['hour'] == hour)]['counts'].values == 1:
                     date = pd.to_datetime(date)
                     new_record = {'timestamp': f"{date} {hour}:00:00", 'usage': np.nan, 'total_capacity': np.nan,
-                                    'date': date, 'time': datetime.strptime(f"{hour}:00:00", '%H:%M:%S').time(), 'year': date.year, 'month': date.month, 'dayOfWeek': date.dayofweek, 'day': date.day, 'hour': hour,
-                                    'minute': 0, 'second': 0, 'quarter': date.quarter, 'dayOfYear': date.dayofyear, 'usage_percentage': np.nan}
+                                  'date': date, 'time': datetime.strptime(f"{hour}:00:00", '%H:%M:%S').time(), 'year': date.year, 'month': date.month, 'dayOfWeek': date.dayofweek, 'day': date.day, 'hour': hour,
+                                  'minute': 0, 'second': 0, 'quarter': date.quarter, 'dayOfYear': date.dayofyear, 'usage_percentage': np.nan}
                     new_timestamps = pd.concat(
                         [new_timestamps, pd.DataFrame.from_records([new_record])])
 
@@ -77,13 +82,15 @@ class ProphetModel(ForecastingModel):
         imputed_df = expanded_df.copy()
 
         # fill total_capacity with max value
-        imputed_df['total_capacity'] = imputed_df['total_capacity'].fillna(imputed_df['total_capacity'].max())
+        imputed_df['total_capacity'] = imputed_df['total_capacity'].fillna(
+            imputed_df['total_capacity'].max())
 
         # fill usage with interpolation that is best appropriate of method
         imputed_df['usage'] = imputed_df['usage'].fillna(method='bfill')
         imputed_df['usage'] = imputed_df['usage'].fillna(method='ffill')
 
-        imputed_df['usage_percentage'] = imputed_df['usage']/imputed_df['total_capacity']*100
+        imputed_df['usage_percentage'] = imputed_df['usage'] / \
+            imputed_df['total_capacity']*100
 
         self.df = imputed_df.copy()
 
@@ -204,8 +211,3 @@ class ProphetModel(ForecastingModel):
         fig.update_layout(title='Evaluation Metrics',
                           xaxis_title='Metric', yaxis_title='Value')
         st.plotly_chart(fig)
-
-    def mean_absolute_percentage_error(self, y_true, y_pred):
-        """  Mean Absolute Percentage Error - MAPE """
-        y_true, y_pred = np.array(y_true), np.array(y_pred)
-        return np.mean(np.abs((y_true - y_pred) / y_true)) * 100

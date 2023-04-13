@@ -1,13 +1,11 @@
-from ForecastingModel import ForecastingModel
-
+import pathlib
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from prophet import Prophet
-import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
-import pathlib
-from abc import ABC, abstractmethod
-
+from ForecastingModel import ForecastingModel
 
 PROJECT_DIR = pathlib.Path.cwd()
 DATA_DIR = PROJECT_DIR / "data"
@@ -27,5 +25,5 @@ class XGBoostModel(ForecastingModel):
     def plot(self, municipalityId):
         pass
 
-    def forecast(self, municipalityId):
-        pass
+    def evaluate(self, municipalityId):
+        return super().evaluate(municipalityId)
