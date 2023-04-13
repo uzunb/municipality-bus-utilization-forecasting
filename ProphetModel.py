@@ -146,7 +146,7 @@ class ProphetModel(ForecastingModel):
 
         return forecast
 
-    def plot(self):
+    def plot(self, municipalityId):
         forecast = self.predict()
         forecast['y'] = self.test_df['y'].values
         forecast = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper', 'y']]
@@ -173,12 +173,12 @@ class ProphetModel(ForecastingModel):
         fig.add_trace(go.Scatter(
             x=forecast['timestamp'], y=forecast['prediction_lower'], name='Lower Bound'))
 
-        fig.update_layout(title='Forecast vs Actuals',
+        fig.update_layout(title='Forecast vs Actuals for {}'.format(municipalityId),
                           xaxis_title='Date', yaxis_title='Usage')
 
         st.plotly_chart(fig)
 
-    def evaluate(self):
+    def evaluate(self, municipalityId):
         forecast = self.predict()
         forecast['y'] = self.test_df['y'].values
         forecast = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper', 'y']]
@@ -188,7 +188,8 @@ class ProphetModel(ForecastingModel):
 
         # calculate MAPE
         mape = self.mean_absolute_percentage_error(
-            forecast['actual'], forecast['prediction'])
+            forecast['actual'], forecast['prediction']
+        )
 
         # calculate MAE
         mae = mean_absolute_error(forecast['actual'], forecast['prediction'])
@@ -204,6 +205,6 @@ class ProphetModel(ForecastingModel):
         fig = go.Figure()
         fig.add_trace(
             go.Bar(x=['MAPE', 'MAE', 'MSE', 'RMSE'], y=[mape, mae, mse, rmse]))
-        fig.update_layout(title='Evaluation Metrics',
+        fig.update_layout(title='Evaluation Metrics for {}'.format(municipalityId),
                           xaxis_title='Metric', yaxis_title='Value')
         st.plotly_chart(fig)
