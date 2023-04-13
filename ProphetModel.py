@@ -10,8 +10,6 @@ import pandas as pd
 import numpy as np
 
 import pathlib
-from abc import ABC, abstractmethod
-
 
 PROJECT_DIR = pathlib.Path.cwd()
 DATA_DIR = PROJECT_DIR / "data"
@@ -27,11 +25,13 @@ class ProphetModel(ForecastingModel):
         self.train_df: pd.DataFrame = None
         self.test_df: pd.DataFrame = None
 
-    def __loadData(self,):
+    def __loadData(self, municipalityId):
         self.df = pd.read_csv(DATA_DIR / 'municipality_bus_utilization.csv')
-        self.df['timestamp'] = pd.to_datetime(
-            self.df['timestamp'], format='%Y-%m-%d %H:%M:%S')
+        self.df['timestamp'] = pd.to_datetime(self.df['timestamp'], format='%Y-%m-%d %H:%M:%S')
         self.df = self.df.set_index('timestamp')
+
+        self.df = self.df[self.df['municipality_id'] == municipalityId]
+        self.df.drop(columns=['municipality_id'], inplace=True)
 
     def __preprocess(self):
         self.df['date'] = pd.to_datetime(self.df.index.date)
@@ -46,29 +46,23 @@ class ProphetModel(ForecastingModel):
         self.df['quarter'] = self.df.index.quarter
         self.df['dayOfYear'] = self.df.index.dayofyear
 
-        self.df['usage'] = self.df.apply(
-            lambda x: x['total_capacity'] if x['usage'] > x['total_capacity'] else x['usage'], axis=1)
-        self.df['usage_percentage'] = self.df['usage'] / \
-            self.df['total_capacity']*100
+        self.df['usage'] = self.df.apply(lambda x: x['total_capacity'] if x['usage'] > x['total_capacity'] else x['usage'], axis=1)
+        self.df['usage_percentage'] = self.df['usage'] / self.df['total_capacity']*100
         self.df.sort_values(by='usage_percentage', ascending=False).head()
 
-        check_df = self.df[['municipality_id', 'date', 'hour']].groupby(
-            ['municipality_id', 'date', 'hour']).size().reset_index(name='counts')
+        check_df = self.df[['date', 'hour']].groupby(['date', 'hour']).size().reset_index(name='counts')
         check_df.sort_values('counts', ascending=True)
 
-        new_timestamps = pd.DataFrame(columns=['timestamp', 'municipality_id', 'usage',
-                                               'total_capacity', 'date', 'time', 'year', 'month', 'dayOfWeek', 'day', 'hour'])
-        for municipality_id in self.df['municipality_id'].unique():
-            for date in self.df['date'].unique():
-                for hour in self.df['hour'].unique():
-                    if check_df[(check_df['municipality_id'] == municipality_id) & (check_df['date'] == date) & (check_df['hour'] == hour)]['counts'].values == 1:
-                        # get year from np.datetime64
-                        date = pd.to_datetime(date)
-                        new_record = {'timestamp': f"{date} {hour}:00:00", 'municipality_id': municipality_id, 'usage': np.nan, 'total_capacity': np.nan,
-                                      'date': date, 'time': datetime.strptime(f"{hour}:00:00", '%H:%M:%S').time(), 'year': date.year, 'month': date.month, 'dayOfWeek': date.dayofweek, 'day': date.day, 'hour': hour,
-                                      'minute': 0, 'second': 0, 'quarter': date.quarter, 'dayOfYear': date.dayofyear, 'usage_percentage': np.nan}
-                        new_timestamps = pd.concat(
-                            [new_timestamps, pd.DataFrame.from_records([new_record])])
+        new_timestamps = pd.DataFrame(columns=['timestamp', 'usage', 'total_capacity', 'date', 'time', 'year', 'month', 'dayOfWeek', 'day', 'hour'])
+        for date in self.df['date'].unique():
+            for hour in self.df['hour'].unique():
+                if check_df[(check_df['date'] == date) & (check_df['hour'] == hour)]['counts'].values == 1:
+                    date = pd.to_datetime(date)
+                    new_record = {'timestamp': f"{date} {hour}:00:00", 'usage': np.nan, 'total_capacity': np.nan,
+                                    'date': date, 'time': datetime.strptime(f"{hour}:00:00", '%H:%M:%S').time(), 'year': date.year, 'month': date.month, 'dayOfWeek': date.dayofweek, 'day': date.day, 'hour': hour,
+                                    'minute': 0, 'second': 0, 'quarter': date.quarter, 'dayOfYear': date.dayofyear, 'usage_percentage': np.nan}
+                    new_timestamps = pd.concat(
+                        [new_timestamps, pd.DataFrame.from_records([new_record])])
 
         # add new timestamp to df
         expanded_df = self.df.copy()
@@ -79,41 +73,32 @@ class ProphetModel(ForecastingModel):
         expanded_df = expanded_df.set_index('timestamp')
         expanded_df.sort_index(inplace=True)
 
+        # impute missing values for each municipality
         imputed_df = expanded_df.copy()
-        for municipality_id in imputed_df['municipality_id'].unique():
-            # fill total_capacity with max value
-            imputed_df.loc[imputed_df['municipality_id'] == municipality_id, 'total_capacity'] = imputed_df[imputed_df['municipality_id'] ==
-                                                                                                            municipality_id]['total_capacity'].fillna(imputed_df[imputed_df['municipality_id'] == municipality_id]['total_capacity'].max())
 
-            # fill usage with interpolation that is best appropriate of method
-            imputed_df.loc[imputed_df['municipality_id'] == municipality_id,
-                           'usage'] = imputed_df[imputed_df['municipality_id'] == municipality_id]['usage'].fillna(method='bfill')
-            imputed_df.loc[imputed_df['municipality_id'] == municipality_id,
-                           'usage'] = imputed_df[imputed_df['municipality_id'] == municipality_id]['usage'].fillna(method='ffill')
+        # fill total_capacity with max value
+        imputed_df['total_capacity'] = imputed_df['total_capacity'].fillna(imputed_df['total_capacity'].max())
 
-        imputed_df['usage_percentage'] = imputed_df['usage'] / \
-            imputed_df['total_capacity']*100
+        # fill usage with interpolation that is best appropriate of method
+        imputed_df['usage'] = imputed_df['usage'].fillna(method='bfill')
+        imputed_df['usage'] = imputed_df['usage'].fillna(method='ffill')
+
+        imputed_df['usage_percentage'] = imputed_df['usage']/imputed_df['total_capacity']*100
+
         self.df = imputed_df.copy()
 
     def fit(self, municipalityId):
-        self.__loadData()
+        self.__loadData(municipalityId=municipalityId)
         self.__preprocess()
 
-        FEATURES = self.df.drop(
-            columns=['usage', 'municipality_id', 'time']).columns
+        FEATURES = self.df.drop(columns=['usage', 'time']).columns
         TARGET = 'usage'
-
-        selected_municipality_id = municipalityId
-
-        thMunicipalityDf = self.df[self.df['municipality_id']
-                                   == selected_municipality_id]
-        thMunicipalityDf = thMunicipalityDf.drop(columns=['municipality_id'])
 
         # split data to train and test set
         horizon = pd.to_datetime("2017-08-05")
 
-        train = thMunicipalityDf[thMunicipalityDf.date < horizon]
-        test = thMunicipalityDf[thMunicipalityDf.date >= horizon]
+        train = self.df[self.df.date < horizon]
+        test = self.df[self.df.date >= horizon]
 
         # prepare data for training
         train = train.reset_index()
@@ -219,9 +204,6 @@ class ProphetModel(ForecastingModel):
         fig.update_layout(title='Evaluation Metrics',
                           xaxis_title='Metric', yaxis_title='Value')
         st.plotly_chart(fig)
-
-    def forecast(self):
-        return self.model.predict(self.model.make_future_dataframe(periods=7))
 
     def mean_absolute_percentage_error(self, y_true, y_pred):
         """  Mean Absolute Percentage Error - MAPE """
