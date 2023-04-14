@@ -2,6 +2,8 @@
 
 Forecasting bus demand in Banana Republic municipalities.
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://uzunb-municipality-bus-utilization-forecas-1--enter-page-96l8kc.streamlit.app/)
+
 ## About
 
 ### Description
