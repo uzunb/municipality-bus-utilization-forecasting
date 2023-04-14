@@ -12,7 +12,6 @@ PROJECT_DIR = pathlib.Path.cwd()
 DATA_DIR = PROJECT_DIR / "data"
 
 
-
 def app():
     st.set_page_config(page_title="Forecasting", page_icon="📈")
 
@@ -48,14 +47,11 @@ def app():
         model = ProphetModel()
     elif model == "XGBoost":
         model = XGBoostModel()
-        
 
     model.intro()
     model.fit(municipalityId=municipality_id)
-    model.plot()
-    model.evaluate()
-    # model.forecast()
-
+    model.plot(municipalityId=municipality_id)
+    model.evaluate(municipalityId=municipality_id)
 
 
 app()
